@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple FPS Game</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div id="instructions">
+        <h1>Click to Play</h1>
+        <p>W, A, S, D to Move</p>
+        <p>MOUSE to Look</p>
+        <p>CLICK to Shoot</p>
+    </div>
+
+    <div id="lobby" style="display: none;">
+        <h1>Multiplayer 1v1</h1>
+        <p id="lobby-status">Connecting to server...</p>
+        <div id="connection-indicator" style="margin-top: 20px;">
+            <div style="width: 20px; height: 20px; background: yellow; border-radius: 50%; margin: 0 auto;"></div>
+        </div>
+    </div>
+
+    <div id="hud">
+        <div id="crosshair">+</div>
+        <div id="stats">
+            <div id="health">Health: 100</div>
+            <div id="score">Score: 0</div>
+        </div>
+    </div>
+
+    <div id="game-over">
+        <h1>GAME OVER</h1>
+        <p id="final-score">Score: 0</p>
+        <button onclick="location.reload()">Try Again</button>
+    </div>
+
+    <script type="module" src="game.js"></script>
+</body>
+</html>
