@@ -36,10 +36,11 @@ let moveLeft = false;
 let moveRight = false;
 let canJump = false;
 let isCrouching = false;
-const PLAYER_STAND_HEIGHT = 9.7;
+const PLAYER_STAND_HEIGHT = 10.0;
 const PLAYER_CROUCH_HEIGHT = 6.0;
-const PLAYER_EYE_OFFSET = 4.2; // Offset from character center to eyes
-const PLAYER_RADIUS = 2.5;
+const PLAYER_EYE_OFFSET = 4.5;
+const PLAYER_RADIUS = 3.5; // Thicker radius for better collision
+
 
 let prevTime = performance.now();
 const velocity = new THREE.Vector3();
@@ -572,15 +573,61 @@ function createKnife(group) {
 
 
 function createMirageMap() {
-    // Materials
-    const sandstoneMain = new THREE.MeshStandardMaterial({ color: 0xe6c29a, roughness: 0.9, side: THREE.DoubleSide }); // Light beige walls
-    const sandstoneDark = new THREE.MeshStandardMaterial({ color: 0xd2b48c, roughness: 0.9, side: THREE.DoubleSide }); // Darker trim
-    const woodNew = new THREE.MeshStandardMaterial({ color: 0x8f6a4e, roughness: 0.8, side: THREE.DoubleSide }); // Clean wood (crates)
-    const woodOld = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 1.0, side: THREE.DoubleSide }); // Dark scaffolding wood
-    const floorTile = new THREE.MeshStandardMaterial({ color: 0xdcbfa6, roughness: 0.8, side: THREE.DoubleSide }); // Floor
-    const darkSpace = new THREE.MeshBasicMaterial({ color: 0x111111, side: THREE.DoubleSide }); // For "inside" doorways
+    // === CS2 MIRAGE MAP - ACCURATE RECREATION ===
+    // Scale: 1 Hammer Unit (HU) = 0.14 Three.js units
+    // Player height: 72 HU = 10 Three.js units (standing)
 
-    // Helper to add box
+    const HU = 0.14; // Hammer unit conversion factor
+
+    // Materials - Mirage desert/sandstone theme
+    const sandstoneWall = new THREE.MeshStandardMaterial({
+        color: 0xe6c29a,
+        roughness: 0.9,
+        side: THREE.DoubleSide
+    });
+
+    const sandstoneDark = new THREE.MeshStandardMaterial({
+        color: 0xc9a876,
+        roughness: 0.85,
+        side: THREE.DoubleSide
+    });
+
+    const woodCrate = new THREE.MeshStandardMaterial({
+        color: 0x8f6a4e,
+        roughness: 0.8,
+        side: THREE.DoubleSide
+    });
+
+    const woodDark = new THREE.MeshStandardMaterial({
+        color: 0x5c4033,
+        roughness: 1.0,
+        side: THREE.DoubleSide
+    });
+
+    const concrete = new THREE.MeshStandardMaterial({
+        color: 0x9a9a9a,
+        roughness: 0.85,
+        side: THREE.DoubleSide
+    });
+
+    const metalBlue = new THREE.MeshStandardMaterial({
+        color: 0x4a5f7f,
+        roughness: 0.4,
+        metalness: 0.6
+    });
+
+    const metalRed = new THREE.MeshStandardMaterial({
+        color: 0x8b3a3a,
+        roughness: 0.5,
+        metalness: 0.5
+    });
+
+    const groundTile = new THREE.MeshStandardMaterial({
+        color: 0xdcbfa6,
+        roughness: 0.9
+    });
+
+    // Helper function to add geometry
     function addBox(x, y, z, w, h, d, mat, rotY = 0, collidable = true) {
         const geo = new THREE.BoxGeometry(w, h, d);
         const mesh = new THREE.Mesh(geo, mat);
@@ -595,78 +642,257 @@ function createMirageMap() {
         return mesh;
     }
 
-    const scale = 4.0; // Increased scale for full map layout
+    // === COORDINATE SYSTEM ===
+    // Origin (0,0,0) is map center
+    // +Z = Towards T-Spawn
+    // -Z = Towards CT-Spawn
+    // +X = Towards B-Site (from T perspective)
+    // -X = Towards A-Site (from T perspective)
 
-    // Helper: Material aliases for cleaner map code
-    const walls = sandstoneMain;
-    const trim = sandstoneDark;
-    const crates = woodNew;
-    const oldWood = woodOld;
+    // === T-SPAWN AREA ===
+    // Position: Back of map, +Z direction
+    const tSpawnZ = 420 * HU;
 
-    // --- 1. T-SPAWN AREA (Z+ direction) ---
-    addBox(0, 0, 450, 100, 40, 50, walls); // Back wall
-    addBox(-60, 0, 400, 20, 40, 150, walls); // Left wall
-    addBox(60, 0, 400, 20, 40, 150, walls); // Right wall
+    // Main T-Spawn building
+    addBox(0, 0, tSpawnZ, 120 * HU, 50 * HU, 80 * HU, sandstoneWall);
 
-    // --- 2. T-RAMP & A-ENTRANCE ---
-    addBox(50 * scale, 0, 20 * scale, 15 * scale, 25 * scale, 40 * scale, walls); // Ramp Left Wall
-    addBox(85 * scale, 0, 20 * scale, 15 * scale, 30 * scale, 40 * scale, walls); // Ramp Right Wall
-    addBox(70 * scale, 25 * scale, 20 * scale, 30 * scale, 5 * scale, 40 * scale, walls); // Roof over Ramp
+    // T-Spawn cover boxes
+    addBox(-30 * HU, 0, tSpawnZ - 40 * HU, 20 * HU, 15 * HU, 20 * HU, woodCrate);
+    addBox(30 * HU, 0, tSpawnZ - 40 * HU, 20 * HU, 15 * HU, 20 * HU, woodCrate);
 
-    // --- 3. A-SITE landmark structures ---
-    addBox(20 * scale, 0, -30 * scale, 12 * scale, 12 * scale, 12 * scale, crates); // Triple box
-    addBox(24 * scale, 12 * scale, -30 * scale, 6 * scale, 6 * scale, 6 * scale, crates); // Top of Triple
-    addBox(40 * scale, 0, -40 * scale, 10 * scale, 12 * scale, 10 * scale, crates); // Firebox
-    addBox(30 * scale, 0, 0, 15 * scale, 20 * scale, 30 * scale, walls); // Sandwich wall
+    // T-Spawn side walls
+    addBox(-80 * HU, 0, tSpawnZ, 40 * HU, 50 * HU, 80 * HU, sandstoneWall);
+    addBox(80 * HU, 0, tSpawnZ, 40 * HU, 50 * HU, 80 * HU, sandstoneWall);
 
-    // --- 4. PALACE ---
-    addBox(80 * scale, 0, -10 * scale, 25 * scale, 40 * scale, 40 * scale, walls); // Palace Main room
-    addBox(70 * scale, 15 * scale, -25 * scale, 30 * scale, 2 * scale, 20 * scale, oldWood); // Balcony
-    addBox(60 * scale, 0, -25 * scale, 2 * scale, 15 * scale, 2 * scale, trim); // Pillar 1
-    addBox(60 * scale, 0, -15 * scale, 2 * scale, 15 * scale, 2 * scale, trim); // Pillar 2
+    // === T-RAMP (Entry to A-Site) ===
+    const rampStartZ = 280 * HU;
+    const rampEndZ = 80 * HU;
+    const rampX = -200 * HU;
 
-    // --- 5. JUNGLE / CONNECTOR / STAIRS ---
-    addBox(-15 * scale, 0, -35 * scale, 25 * scale, 35 * scale, 40 * scale, walls); // Connector/Jungle mass
-    addBox(-10 * scale, 20 * scale, -15 * scale, 15 * scale, 2 * scale, 10 * scale, walls); // Window frame
-    for (let i = 0; i < 10; i++) {
-        addBox(-5 * scale, 0 + (i * 2), -25 * scale + (i * 3), 15 * scale, 3 * scale, 3 * scale, trim); // Stairs
+    // Ramp walls (left and right)
+    addBox(rampX - 40 * HU, 0, (rampStartZ + rampEndZ) / 2, 10 * HU, 40 * HU, 200 * HU, sandstoneWall);
+    addBox(rampX + 40 * HU, 0, (rampStartZ + rampEndZ) / 2, 10 * HU, 40 * HU, 200 * HU, sandstoneWall);
+
+    // Ramp floor (sloped)
+    const rampFloor = addBox(rampX, -5, (rampStartZ + rampEndZ) / 2, 70 * HU, 2 * HU, 200 * HU, groundTile, 0, false);
+    rampFloor.rotation.x = -0.1; // Slight slope
+
+    // Ramp overhang details
+    for (let i = 0; i < 4; i++) {
+        addBox(rampX, 35 * HU, rampStartZ - i * 50 * HU, 60 * HU, 3 * HU, 15 * HU, woodDark, 0, false);
     }
 
-    // --- 6. MID AREA ---
-    addBox(0, 0, 0, 20 * scale, 2 * scale, 100 * scale, floorTile, 0, false); // Mid Lane
-    addBox(-30 * scale, 0, 0, 5 * scale, 40 * scale, 80 * scale, walls); // Mid Left wall (Catwalk)
-    addBox(30 * scale, 0, 0, 5 * scale, 40 * scale, 80 * scale, walls); // Mid Right wall
-    addBox(-35 * scale, 15 * scale, 0, 10 * scale, 2 * scale, 40 * scale, walls); // Catwalk path
+    // === A-SITE ===
+    const aSiteX = -220 * HU;
+    const aSiteZ = -50 * HU;
 
-    // --- 7. B-SITE AREA (Z- direction) ---
-    addBox(-100 * scale, 0, -40 * scale, 40 * scale, 10 * scale, 40 * scale, trim); // B-Default platform
-    addBox(-105 * scale, 0, -25 * scale, 15 * scale, 12 * scale, 15 * scale, crates); // Van area
-    addBox(-80 * scale, 0, -60 * scale, 10 * scale, 12 * scale, 25 * scale, trim); // Bench
-    addBox(-120 * scale, 0, -20 * scale, 30 * scale, 50 * scale, 60 * scale, walls); // Market building
+    // A-Site floor
+    addBox(aSiteX, -2, aSiteZ, 180 * HU, 1 * HU, 180 * HU, groundTile, 0, false);
 
-    // --- 8. APARTMENTS ---
-    addBox(-80 * scale, 20 * scale, 50 * scale, 25 * scale, 30 * scale, 100 * scale, walls); // Apps building
-    addBox(-75 * scale, 35 * scale, 80 * scale, 15 * scale, 5 * scale, 15 * scale, oldWood); // Apps window
+    // TETRIS (boxes at ramp exit)
+    addBox(aSiteX + 20 * HU, 0, aSiteZ + 60 * HU, 18 * HU, 20 * HU, 18 * HU, woodCrate);
+    addBox(aSiteX + 20 * HU, 20 * HU, aSiteZ + 60 * HU, 14 * HU, 16 * HU, 14 * HU, woodCrate);
 
-    // --- 9. CT-SPAWN & TICKET ---
-    addBox(0, 0, -450, 100, 40, 50, walls); // CT Back wall
-    addBox(20 * scale, 0, -60 * scale, 15 * scale, 15 * scale, 15 * scale, walls); // Ticket booth
-    addBox(15 * scale, 15 * scale, -60 * scale, 25 * scale, 2 * scale, 20 * scale, trim); // Ticket Roof
+    // TRIPLE BOXES (default plant)
+    addBox(aSiteX + 30 * HU, 0, aSiteZ - 20 * HU, 20 * HU, 18 * HU, 20 * HU, woodCrate);
+    addBox(aSiteX + 30 * HU, 18 * HU, aSiteZ - 20 * HU, 16 * HU, 14 * HU, 16 * HU, woodCrate);
+    addBox(aSiteX + 30 * HU, 32 * HU, aSiteZ - 20 * HU, 12 * HU, 10 * HU, 12 * HU, woodCrate);
 
-    // --- 10. Surroundings (Boundary) ---
-    addBox(0, 0, 600, 1200, 150, 20, walls); // Far T wall
-    addBox(0, 0, -600, 1200, 150, 20, walls); // Far CT wall
-    addBox(600, 0, 0, 20, 150, 1200, walls); // Far Right
-    addBox(-600, 0, 0, 20, 150, 1200, walls); // Far Left
+    // FIREBOX
+    const fireboxPlatform = addBox(aSiteX + 70 * HU, 0, aSiteZ - 60 * HU, 35 * HU, 12 * HU, 35 * HU, sandstoneDark);
+    addBox(aSiteX + 70 * HU, 12 * HU, aSiteZ - 60 * HU, 15 * HU, 15 * HU, 15 * HU, woodCrate);
 
-    // Floor override (since we passed in materials)
-    // We already have a floor in init(), but let's place some "paving" stones for detail
-    // Random flat stones on the ground
-    for (let i = 0; i < 20; i++) {
-        const sX = (Math.random() - 0.5) * 100;
-        const sZ = (Math.random() - 0.5) * 100;
-        addBox(sX, -0.4, sZ, 8, 0.5, 8, floorTile, 0, false);
+    // NINJA (corner behind boxes)
+    addBox(aSiteX + 50 * HU, 0, aSiteZ - 75 * HU, 25 * HU, 30 * HU, 10 * HU, sandstoneWall);
+
+    // STAIRS (elevated position)
+    const stairsX = aSiteX - 50 * HU;
+    const stairsZ = aSiteZ + 40 * HU;
+    addBox(stairsX, 0, stairsZ, 30 * HU, 15 * HU, 40 * HU, concrete);
+    addBox(stairsX, 15 * HU, stairsZ - 15 * HU, 30 * HU, 15 * HU, 20 * HU, concrete);
+
+    // SANDWICH (narrow passage between ramp and stairs)
+    addBox(stairsX + 20 * HU, 0, stairsZ + 30 * HU, 8 * HU, 35 * HU, 20 * HU, sandstoneWall);
+
+    // === PALACE ===
+    const palaceX = -320 * HU;
+    const palaceZ = 20 * HU;
+
+    // Palace main building (ground floor)
+    addBox(palaceX, 0, palaceZ, 60 * HU, 35 * HU, 70 * HU, sandstoneWall);
+
+    // Palace entrance from T-side
+    addBox(palaceX + 40 * HU, 0, palaceZ + 50 * HU, 30 * HU, 35 * HU, 30 * HU, sandstoneWall);
+
+    // Palace balcony (second floor)
+    const balconyHeight = 25 * HU;
+    addBox(palaceX, balconyHeight, palaceZ - 20 * HU, 50 * HU, 3 * HU, 30 * HU, woodDark, 0, false);
+
+    // Palace pillars
+    for (let i = 0; i < 3; i++) {
+        const pillarZ = palaceZ - 30 * HU + i * 25 * HU;
+        // Base
+        addBox(palaceX - 35 * HU, 0, pillarZ, 6 * HU, 3 * HU, 6 * HU, sandstoneDark);
+        // Column
+        addBox(palaceX - 35 * HU, 3 * HU, pillarZ, 4 * HU, 22 * HU, 4 * HU, sandstoneDark);
+        // Capital
+        addBox(palaceX - 35 * HU, 25 * HU, pillarZ, 6 * HU, 2 * HU, 6 * HU, sandstoneDark);
     }
+
+    // SHADOW (under balcony)
+    addBox(palaceX, 0, palaceZ - 20 * HU, 40 * HU, 24 * HU, 25 * HU, sandstoneWall, 0, false);
+
+    // === CONNECTOR & JUNGLE ===
+    const connectorX = -80 * HU;
+    const connectorZ = -20 * HU;
+
+    // Connector hallway
+    addBox(connectorX, 0, connectorZ, 35 * HU, 40 * HU, 60 * HU, sandstoneWall);
+
+    // Jungle (narrow room connecting mid to A)
+    const jungleX = -120 * HU;
+    const jungleZ = -80 * HU;
+    addBox(jungleX, 0, jungleZ, 40 * HU, 35 * HU, 50 * HU, sandstoneWall);
+
+    // Window from Mid to Jungle
+    addBox(jungleX + 25 * HU, 15 * HU, jungleZ + 30 * HU, 2 * HU, 15 * HU, 20 * HU, metalBlue, 0, false);
+
+    // === MID AREA ===
+    const midZ = 150 * HU;
+
+    // Top Mid (wide lane)
+    addBox(0, -2, midZ, 100 * HU, 1 * HU, 250 * HU, groundTile, 0, false);
+
+    // Mid walls (left side - towards B)
+    addBox(60 * HU, 0, midZ, 10 * HU, 45 * HU, 250 * HU, sandstoneWall);
+
+    // Mid walls (right side - towards A)
+    addBox(-60 * HU, 0, midZ, 10 * HU, 45 * HU, 250 * HU, sandstoneWall);
+
+    // Mid boxes (cover)
+    addBox(10 * HU, 0, midZ + 50 * HU, 12 * HU, 18 * HU, 12 * HU, woodCrate);
+    addBox(-15 * HU, 0, midZ + 80 * HU, 10 * HU, 12 * HU, 10 * HU, woodCrate);
+    addBox(20 * HU, 0, midZ - 30 * HU, 15 * HU, 15 * HU, 15 * HU, woodCrate);
+
+    // Underpass (lower passage in mid)
+    addBox(0, -15 * HU, midZ - 80 * HU, 40 * HU, 20 * HU, 60 * HU, concrete);
+
+    // === B-SITE ===
+    const bSiteX = 220 * HU;
+    const bSiteZ = -80 * HU;
+
+    // B-Site floor
+    addBox(bSiteX, -2, bSiteZ, 160 * HU, 1 * HU, 160 * HU, groundTile, 0, false);
+
+    // VAN (iconic white truck)
+    addBox(bSiteX - 40 * HU, 0, bSiteZ + 20 * HU, 25 * HU, 20 * HU, 50 * HU, metalBlue);
+    addBox(bSiteX - 40 * HU, 20 * HU, bSiteZ + 35 * HU, 25 * HU, 15 * HU, 20 * HU, metalBlue); // Van cabin
+
+    // BENCH (low cover)
+    addBox(bSiteX + 30 * HU, 0, bSiteZ - 40 * HU, 40 * HU, 8 * HU, 15 * HU, woodDark);
+
+    // B-Site pillars
+    addBox(bSiteX, 0, bSiteZ, 8 * HU, 35 * HU, 8 * HU, concrete);
+    addBox(bSiteX + 40 * HU, 0, bSiteZ - 30 * HU, 8 * HU, 35 * HU, 8 * HU, concrete);
+
+    // B-Site boxes (default plant area)
+    addBox(bSiteX + 20 * HU, 0, bSiteZ + 30 * HU, 18 * HU, 16 * HU, 18 * HU, woodCrate);
+    addBox(bSiteX + 20 * HU, 16 * HU, bSiteZ + 30 * HU, 14 * HU, 12 * HU, 14 * HU, woodCrate);
+
+    // Back site wall
+    addBox(bSiteX + 60 * HU, 0, bSiteZ, 20 * HU, 40 * HU, 120 * HU, sandstoneWall);
+
+    // === APARTMENTS ===
+    const aptsX = 180 * HU;
+    const aptsZ = 180 * HU;
+
+    // Apartments main building
+    addBox(aptsX, 0, aptsZ, 70 * HU, 40 * HU, 100 * HU, sandstoneWall);
+
+    // Apartments upper floor
+    addBox(aptsX, 40 * HU, aptsZ + 20 * HU, 60 * HU, 30 * HU, 60 * HU, sandstoneWall);
+
+    // Apartments stairs/entrance
+    addBox(aptsX - 40 * HU, 0, aptsZ - 60 * HU, 30 * HU, 35 * HU, 40 * HU, concrete);
+
+    // Apartments windows
+    addBox(aptsX - 30 * HU, 45 * HU, aptsZ + 40 * HU, 2 * HU, 12 * HU, 20 * HU, metalBlue, 0, false);
+
+    // === MARKET ===
+    const marketX = 160 * HU;
+    const marketZ = -150 * HU;
+
+    // Market building
+    addBox(marketX, 0, marketZ, 60 * HU, 45 * HU, 70 * HU, sandstoneWall);
+
+    // Market window (overlooking B-Site)
+    addBox(marketX - 35 * HU, 20 * HU, marketZ + 20 * HU, 2 * HU, 15 * HU, 25 * HU, metalBlue, 0, false);
+
+    // Market door
+    addBox(marketX - 30 * HU, 0, marketZ - 40 * HU, 5 * HU, 30 * HU, 15 * HU, woodDark, 0, false);
+
+    // === SHORT (Catwalk from Mid to B) ===
+    const shortX = 120 * HU;
+    const shortZ = 30 * HU;
+
+    // Short platform
+    addBox(shortX, 10 * HU, shortZ, 40 * HU, 2 * HU, 80 * HU, concrete, 0, false);
+
+    // Short walls
+    addBox(shortX - 25 * HU, 0, shortZ, 10 * HU, 35 * HU, 80 * HU, sandstoneWall);
+    addBox(shortX + 25 * HU, 0, shortZ, 10 * HU, 35 * HU, 80 * HU, sandstoneWall);
+
+    // === CT-SPAWN ===
+    const ctSpawnZ = -420 * HU;
+
+    // Main CT-Spawn building
+    addBox(0, 0, ctSpawnZ, 140 * HU, 50 * HU, 80 * HU, sandstoneWall);
+
+    // CT-Spawn side buildings
+    addBox(-90 * HU, 0, ctSpawnZ, 40 * HU, 50 * HU, 80 * HU, sandstoneWall);
+    addBox(90 * HU, 0, ctSpawnZ, 40 * HU, 50 * HU, 80 * HU, sandstoneWall);
+
+    // Ticket booth
+    const ticketX = -30 * HU;
+    const ticketZ = -280 * HU;
+    addBox(ticketX, 0, ticketZ, 25 * HU, 25 * HU, 25 * HU, sandstoneDark);
+    addBox(ticketX, 25 * HU, ticketZ, 30 * HU, 3 * HU, 30 * HU, metalRed, 0, false); // Roof
+
+    // === DECORATIVE ELEMENTS ===
+
+    // Barrels scattered around map
+    const barrelPositions = [
+        [aSiteX + 40 * HU, aSiteZ + 50 * HU],
+        [bSiteX - 20 * HU, bSiteZ - 50 * HU],
+        [20 * HU, midZ + 100 * HU],
+        [-40 * HU, midZ - 50 * HU]
+    ];
+
+    barrelPositions.forEach(([x, z]) => {
+        const barrel = addBox(x, 0, z, 6 * HU, 12 * HU, 6 * HU, metalRed);
+        barrel.rotation.y = Math.random() * Math.PI;
+    });
+
+    // Ground detail tiles (scattered paving stones)
+    for (let i = 0; i < 50; i++) {
+        const randX = (Math.random() - 0.5) * 900 * HU;
+        const randZ = (Math.random() - 0.5) * 900 * HU;
+        addBox(randX, -1, randZ, 15 * HU, 0.5 * HU, 15 * HU, groundTile, Math.random() * Math.PI, false);
+    }
+
+    // Outer boundary walls (to prevent falling off map)
+    const boundarySize = 500 * HU;
+    const boundaryHeight = 60 * HU;
+
+    // North wall
+    addBox(0, 0, boundarySize, boundarySize * 2, boundaryHeight, 10 * HU, sandstoneWall);
+    // South wall
+    addBox(0, 0, -boundarySize, boundarySize * 2, boundaryHeight, 10 * HU, sandstoneWall);
+    // East wall
+    addBox(boundarySize, 0, 0, 10 * HU, boundaryHeight, boundarySize * 2, sandstoneWall);
+    // West wall
+    addBox(-boundarySize, 0, 0, 10 * HU, boundaryHeight, boundarySize * 2, sandstoneWall);
+}
 }
 
 // --- Game Logic ---
@@ -1241,7 +1467,7 @@ function endRound(playerWon) {
         if (deathScreen) deathScreen.style.display = 'block';
     }
 
-    if (playerWins >= MAX_WINS || enemyWins >= MAX_WINS) {
+    if (playerWins >= MAX_WINS || enemyWins >= MAX_WINS || (networkReady && opponentWins >= MAX_WINS)) {
         setTimeout(() => endGame(playerWins >= MAX_WINS), 2000);
     } else {
         setTimeout(startRound, 3000); // Wait 3s as requested
@@ -1341,12 +1567,8 @@ function animate() {
             }
         }
 
-        if (moveLeft || moveRight) {
-            const accel = isCrouching ? 150.0 : 400.0;
-            velocity.x -= direction.x * accel * delta;
-        }
-
         const currentTargetHeight = isCrouching ? PLAYER_CROUCH_HEIGHT : PLAYER_STAND_HEIGHT;
+
         const lerpSpeed = 10 * delta;
         const playerObj = controls.getObject();
 
